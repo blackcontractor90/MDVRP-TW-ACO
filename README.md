@@ -162,7 +162,7 @@ Troubleshooting
 
 Author / Contact
 ----------------
-Created for the code file MDVRPTWSolver.java provided by blackcontractor90.
+Created for the code file MDVRPTWSolver.java provided by blackcontractor90 (https://www.linkedin.com/in/farid-morsidi-372083141/).
 
 Acknowledgements
 ----------------
