@@ -1,169 +1,501 @@
-# MDVRPTWSolver (Hybridized ACO)
+# Adaptive and Diversity-Driven Ant Colony Optimization for MDVRPTW
 
-A lightweight JavaFX GUI for running Ant Colony Optimization (ACO) on the Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW).  
-This project provides a legacy-style solver frontend (MDVRPTWSolver.java) that:
+A Java/JavaFX research implementation of **Ant Colony Optimization (ACO)** for the **Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW)**.
 
-- Loads problem instances (Cordeau-like text format or flexible CSV).
-- Integrates with an ACO implementation by reflection (constructor-agnostic).
-- Visualizes ACO progress with a line chart and produces route visualizations (bar and scatter).
-- Exports route summaries to CSV and saves charts/images to `results/` folders.
+This project provides a graphical environment for loading MDVRPTW instances, configuring ACO parameters, executing the optimization process, monitoring convergence, visualizing routes, and exporting route summaries.
 
-This README documents how to run, the expected formats, how the ACO integration works and where outputs are saved.
+The implementation accompanies the research work:
 
-Table of Contents
-- About
-- Requirements
-- Expected project classes
-- Supported input formats
-- Build & Run
-- Usage (GUI)
-- ACO integration (reflection details)
-- Exports, visualization, output files
-- Troubleshooting
-- Contributing
-- License
-- Author / Contact
+> **Adaptive and Diversity-Driven Ant Colony Optimization Variants for the Multi-Depot Vehicle Routing Problem with Time Windows**
 
-About
------
-MDVRPTWSolver.java is a JavaFX application that acts as a GUI and helper layer around legacy domain classes (Customer, Depot, Route, Solution) and an Ant Colony Optimization class (AntColonyOptimization). It keeps the original console-style API but adds modern conveniences like file loading, CSV export, chart saving and runtime parameter sliders.
+**Farid Morsidi, Asma Hanee Ariffin, and Rohaizah Abdul Wahid**
 
-Requirements
-------------
-- Java 11+ (OpenJDK recommended)
-- JavaFX (OpenJFX) matching your Java version (JavaFX SDK 11+). JavaFX modules required at runtime: javafx.controls (and javafx.fxml if you extend).
-- Optional: build tool like Maven or Gradle to handle JavaFX dependencies.
+---
 
-Expected project classes
-------------------------
-The solver relies on the presence of several domain classes in the same project/classpath:
+## Overview
 
-- Customer — expected fields/methods: id, x, y, demand, ready, due, service, distanceTo(...)
-- Depot — fields: id, x, y, vehicleCapacity, maxVehicles, maxDuration, customers (array)
-- Vehicle — (if used elsewhere)
-- Route — constructor Route(Depot) and fields: depot, customers (list). Methods: addCustomer(...)
-- Solution — fields: chromosome (list/array of ints), routes (list), addRoute(Route), evaluate()
-- RouteExporter — static helpers used by MDVRPTWSolver:
-  - exportSummary(List<Route>, String pathOrNull)
-  - exportToCSV(List<Route>, String pathOrNull)
-  These helpers are used for saving route summaries. If you keep the existing RouteExporter, MDVRPTWSolver will call it.
+The **Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW)** is a combinatorial optimization problem in which a fleet of vehicles must serve customers from multiple depots while considering routing distance, vehicle capacity, service requirements, and customer time windows.
 
-Supported input formats
------------------------
-1. Cordeau-like text format (typical MDVRPTW datasets)
-   - Header line usually has: m n [Q V ...]
-     - m = #depots
-     - n = #customers
-     - Optional Q = vehicle capacity, V = vehicles per depot
-   - Next m lines: depotId x y [capacity] [maxVehicles]
-   - Next n lines: custId x y demand ready due service
+This repository investigates ACO-based approaches for MDVRPTW, with particular attention to the balance between **exploration and exploitation**.
 
-2. CSV (flexible headers)
-   - The first row is header. Column names are case-insensitive.
-   - Recognized columns (examples):
-     id, x, y, demand, ready, due, service, type, name, maxVehicles, vehicleCapacity, depotId
-   - type: "depot" or "customer". If missing, the parser infers depot when demand==0 && service==0.
-   - If CSV contains only customers, a default depot at (0,0) is added.
+The research implementation considers three complementary mechanisms:
 
-Build & Run
------------
+* **Local-search refinement** to improve constructed solutions.
+* **Adaptive parameter control** to respond to stagnation during the search.
+* **Diversity-driven adaptation** to preserve variation among candidate solutions.
+* **Hybrid adaptation** combining stagnation-based and diversity-based feedback.
 
-Using Maven (recommended)
-- Add OpenJFX dependencies to your pom.xml (or use the javafx-maven-plugin).
-- Example run:
-  mvn clean package
-  java --module-path /path/to/javafx/lib --add-modules javafx.controls,javafx.swing -cp target/your-jar.jar MDVRPTWSolver
+The overall objective is not simply to increase exploitation, but to provide an optimization framework capable of adapting its search behaviour as the problem landscape changes.
 
-Using Gradle
-- Use the Java plugin and the `org.openjfx` plugin to add JavaFX dependencies.
-- Run via `gradle run` or create a fat jar and run with module path options as above.
+---
 
-Plain javac/java (manual)
-- Compile:
-  javac --module-path /path/to/javafx/lib --add-modules javafx.controls -cp . MDVRPTWSolver.java
-- Run:
-  java --module-path /path/to/javafx/lib --add-modules javafx.controls -cp . MDVRPTWSolver
+## Research Motivation
 
-Notes:
-- Replace `/path/to/javafx/lib` with the JavaFX SDK lib dir you downloaded for your platform.
-- If you package a jar, you still need to supply the JavaFX modules unless using a bundled runtime (jlink).
+Classical ACO can be affected by:
 
-Usage (GUI)
------------
-1. Start the application — a main window with:
-   - Menu: File → Load Instance..., Save Routes Summary..., Exit
-   - Tools → Run ACO
-   - Right-side: ACO Hyperparameter sliders (alpha, beta, rho, q0) and Run button
-   - Center: Line chart showing best distance vs iteration
+* Premature convergence.
+* Excessive concentration of pheromone information.
+* Sensitivity to parameter settings.
+* Insufficient exploration on more difficult routing instances.
 
-2. Load data:
-   - File → Load Instance... and select a .txt/.dat (Cordeau-like) or .csv file.
+The implemented framework therefore investigates adaptive mechanisms based on both **search progress** and **population diversity**.
 
-3. Run ACO:
-   - Either click the "Run ACO" button in the right panel or Tools → Run ACO.
-   - The UI provides sliders for α (alpha), β (beta), ρ (rho evaporation) and q0 (exploration vs exploitation).
-   - The app will instantiate an AntColonyOptimization class (see reflection details below) and attempt to run it in a background thread.
+The principal ACO parameters considered are:
 
-4. Export:
-   - After a run finishes (if routes are available), MDVRPTWSolver attempts to automatically export via RouteExporter and shows an alert pointing to `results/routes_summary_latest.csv`.
-   - You may also explicitly use File → Save Routes Summary... to pick a location.
+| Parameter | Description                        |
+| --------- | ---------------------------------- |
+| `α`       | Influence of pheromone information |
+| `β`       | Influence of heuristic information |
+| `ρ`       | Pheromone evaporation rate         |
+| `q0`      | Exploitation/exploration balance   |
 
-ACO integration (reflection details)
-------------------------------------
-MDVRPTWSolver uses reflection to integrate with a class named `AntColonyOptimization` found on the classpath. Supported instantiation patterns (in order of preference):
+The adaptive mechanism can modify these parameters when the search exhibits stagnation, while the diversity mechanism responds when the candidate-solution population becomes insufficiently diverse.
 
-Constructors MDVRPTWSolver will try:
-1. AntColonyOptimization(MDVRPTWSolver solver, int numAnts, int maxIterations, double alpha, double beta, double rho, double q0)
-2. AntColonyOptimization(MDVRPTWSolver solver, int numAnts, int maxIterations) — then MDVRPTWSolver will attempt to call setters:
-   - setAlpha(double), setBeta(double), setRho(double), setQ0(double), setConvergenceSeries(XYChart.Series)
-3. AntColonyOptimization(int numAnts, int maxIterations, double alpha, double beta, double rho, double q0)
-4. Default constructor AntColonyOptimization() — then MDVRPTWSolver will attempt setters:
-   - setSolver(MDVRPTWSolver)
-   - setNumAnts(int), setMaxIterations(int)
-   - setAlpha(double), setBeta(double), setRho(double), setQ0(double)
-   - setConvergenceSeries(XYChart.Series)
+---
 
-Execution:
-- If the instantiated ACO instance implements Runnable, MDVRPTWSolver will call run() directly.
-- Otherwise MDVRPTWSolver will try to reflectively call a run() method.
+## Main Components
 
-Integration tips:
-- Implementers of AntColonyOptimization should:
-  - Offer at least one of the constructor/signature patterns above, or
-  - Provide setters listed above so MDVRPTWSolver can configure the instance.
-  - During the ACO run, call MDVRPTWSolver.updateChart(iteration, bestValue) when appropriate to populate the chart and to permit final chart saving.
-  - When a best solution is evaluated, call MDVRPTWSolver.evaluateSolution(Solution) so lastSolutionRoutes are populated for export/visualization.
+### 1. ACO with Local Search
 
-Exports & visualization
------------------------
-- RouteExporter.exportSummary(...) or exportToCSV(...) is used to save CSV summaries.
-- Default exports are placed under `results/` (e.g. `results/routes_summary_latest.csv`).
-- Charts are saved to:
-  - `results/` — general snapshots (`aco_chart_YYYYMMDD_HHMMSS.png`)
-  - `results/plots` — `saveFinalChart` writes labeled final charts and a `_latest.png`.
-- After export, MDVRPTWSolver will attempt to visualize:
-  - Bar chart of route distances (RouteID vs TotalDistance) by reading the CSV.
-  - Scatter plot of routes (one series per route including depot positions).
+The solution-construction process uses pheromone information and heuristic information while considering routing feasibility.
 
-CSV route summary expectations (RouteExporter output)
-- Columns should include at least route id and total distance. MDVRPTWSolver's visualizer looks for `RouteID` and `TotalDistance` headers (case-insensitive), and has fallbacks if they are missing.
+Local-search refinement is subsequently applied to improve constructed routes.
 
-Troubleshooting
----------------
-- JavaFX runtime errors:
-  - Ensure the JavaFX SDK version matches your JDK and you pass the `--module-path` and `--add-modules` flags.
-- ClassNotFoundException: AntColonyOptimization or RouteExporter
-  - Make sure those classes are compiled and on the classpath at runtime.
-- No routes exported / lastSolutionRoutes empty:
-  - Ensure the ACO implementation calls back into MDVRPTWSolver (evaluateSolution or sets lastSolutionRoutes) or that a Solution is evaluated and routes are added with Solution.addRoute(...).
-- CSV parsing differences:
-  - If your CSV header uses different names, either adapt RouteExporter or the CSV to match the expected fields (id,x,y,demand,ready,due,service,type).
+The research framework considers:
 
+* Intra-route **2-opt**
+* Inter-route **relocate**
+* Additional local-search moves where applicable
 
-Author / Contact
-----------------
-Created for the code file MDVRPTWSolver.java provided by blackcontractor90 (https://www.linkedin.com/in/farid-morsidi-372083141/).
+This provides an intensification stage following the global exploration performed by ACO.
 
-Acknowledgements
-----------------
-This project is intended to modernize a legacy MDVRPTW solver GUI with minimal invasive changes while adding useful features: file I/O, chart snapshotting and ACO integration by reflection.
+### 2. Adaptive ACO
+
+The adaptive variant monitors optimization progress and modifies ACO parameters when the search becomes stagnant.
+
+When stagnation is detected, the framework can:
+
+* Reduce `q0` to encourage exploration.
+* Increase `ρ` to alter pheromone evaporation.
+* Adjust `α` and `β` to change the relative influence of pheromone and heuristic information.
+
+The intention is to reduce prolonged convergence around an insufficient solution.
+
+### 3. Diversity-Driven ACO
+
+The diversity-based variant monitors the variability of solutions generated by the ant population.
+
+A normalized solution-distance measure is used to identify situations in which the population becomes overly similar.
+
+When diversity falls below the specified threshold, the search parameters are modified to encourage further exploration.
+
+### 4. Hybrid Adaptive-Diversity ACO
+
+The combined approach monitors two conditions:
+
+1. **Search stagnation**
+2. **Low solution diversity**
+
+Parameter adaptation can be triggered by either condition.
+
+This creates a feedback-driven mechanism that attempts to maintain an appropriate balance between convergence and exploration.
+
+---
+
+## Benchmark Study
+
+The associated research evaluates the ACO variants using the **Cordeau MDVRPTW benchmark instances p01–p08**.
+
+The experimental configuration reported in the paper is:
+
+| Parameter           | Value |
+| ------------------- | ----: |
+| `α`                 |   1.0 |
+| `β`                 |   2.0 |
+| `ρ`                 |   0.1 |
+| `q0`                |   0.9 |
+| Number of ants      |    20 |
+| Maximum iterations  |   100 |
+| Stagnation limit    |    10 |
+| Diversity threshold |   0.2 |
+
+The study evaluates several measures, including:
+
+* Total distance
+* Route duration
+* Cost
+* Time-window penalty
+
+---
+
+## Reported Research Findings
+
+The experiments show that the behaviour of the different strategies varies with instance size and difficulty.
+
+For medium-scale instances, the combined hybrid strategy achieved reductions of up to:
+
+* **28.5% in total distance**
+* **20.3% in penalty**
+
+relative to the adaptive ACO configuration reported in the study.
+
+The diversity-driven approach also produced substantial improvements on selected medium-scale instances, with a maximum reported distance reduction of approximately **25%** relative to adaptive ACO.
+
+The results also demonstrate that no single adaptation mechanism consistently produces the lowest objective values for every benchmark instance. The study therefore focuses on the complementary behaviour of adaptive control and diversity preservation rather than claiming universal superiority of one configuration.
+
+---
+
+## Software Features
+
+The Java/JavaFX application provides:
+
+* MDVRPTW instance loading
+* Cordeau-like text input
+* Flexible CSV input
+* ACO parameter controls
+* JavaFX graphical interface
+* ACO convergence visualization
+* Route visualization
+* Route-distance charts
+* Scatter plots of routes and depots
+* CSV route-summary export
+* Automatic result-file generation
+* Runtime ACO integration through `AntColonyOptimization`
+
+The current repository is designed around a lightweight solver architecture and retains compatibility with the existing domain classes used by the MDVRPTW implementation.
+
+---
+
+## Repository Structure
+
+The principal Java components are:
+
+```text
+MDVRP-TW-ACO/
+│
+├── AntColonyOptimization.java
+├── MDVRPTWSolver.java
+├── RoutingSolver.java
+│
+├── Customer.java
+├── Depot.java
+├── Vehicle.java
+├── Route.java
+├── Solution.java
+├── Decoder.java
+│
+├── DataLoader.java
+├── RouteExporter.java
+│
+├── SolutionMetrics.java
+├── MetricsAnalyzer.java
+├── MetricsChartViewer.java
+│
+├── CanvasPane.java
+│
+├── instructions.txt
+├── LICENCE
+└── README.md
+```
+
+---
+
+## Requirements
+
+### Java
+
+The project is intended for:
+
+* **Java 11 or later**
+
+### JavaFX
+
+A compatible **OpenJFX** installation is required.
+
+The primary runtime module is:
+
+```text
+javafx.controls
+```
+
+Additional JavaFX modules may be required depending on the selected build configuration.
+
+---
+
+## Input Formats
+
+### Cordeau-like Text Format
+
+The solver supports Cordeau-like MDVRPTW text files.
+
+A typical structure contains:
+
+```text
+m n ...
+```
+
+followed by depot information and customer information.
+
+Conceptually:
+
+```text
+depotId x y capacity maxVehicles
+customerId x y demand ready due service
+```
+
+The exact input structure should follow the format expected by the project's `DataLoader`.
+
+### CSV
+
+Flexible CSV input is also supported.
+
+Typical fields include:
+
+```text
+id
+x
+y
+demand
+ready
+due
+service
+type
+maxVehicles
+vehicleCapacity
+depotId
+```
+
+The parser treats `depot` and `customer` as the principal entity types.
+
+---
+
+## Building and Running
+
+### Using an IDE
+
+The project can be imported into a Java development environment such as Eclipse or IntelliJ IDEA.
+
+Ensure that:
+
+1. A compatible JDK is configured.
+2. JavaFX libraries are available.
+3. The JavaFX module path is correctly configured.
+4. All project `.java` files are included in the build path.
+
+The main application is:
+
+```text
+MDVRPTWSolver
+```
+
+### Command Line
+
+A manual JavaFX compilation follows the general form:
+
+```bash
+javac --module-path /path/to/javafx/lib \
+      --add-modules javafx.controls \
+      -cp . \
+      MDVRPTWSolver.java
+```
+
+Run with:
+
+```bash
+java --module-path /path/to/javafx/lib \
+     --add-modules javafx.controls \
+     -cp . \
+     MDVRPTWSolver
+```
+
+Replace:
+
+```text
+/path/to/javafx/lib
+```
+
+with the location of the JavaFX SDK on the local system.
+
+---
+
+## Using the Graphical Interface
+
+After launching the application:
+
+### 1. Load an Instance
+
+Use:
+
+```text
+File → Load Instance...
+```
+
+Supported files include:
+
+```text
+.txt
+.dat
+.csv
+```
+
+### 2. Configure ACO
+
+The interface provides controls for:
+
+```text
+α   Pheromone influence
+β   Heuristic influence
+ρ   Evaporation rate
+q0  Exploration / exploitation balance
+```
+
+### 3. Run the Optimizer
+
+Use:
+
+```text
+Tools → Run ACO
+```
+
+or the corresponding run control in the interface.
+
+### 4. Monitor Convergence
+
+The application provides a convergence chart showing the development of the best objective value across iterations.
+
+### 5. Inspect Routes
+
+The generated solution can be visualized using route-distance and spatial route plots.
+
+### 6. Export Results
+
+Route summaries can be exported to CSV.
+
+Typical output:
+
+```text
+results/routes_summary_latest.csv
+```
+
+Charts are also saved under the `results/` directory.
+
+---
+
+## ACO Integration
+
+`MDVRPTWSolver` integrates with the `AntColonyOptimization` implementation.
+
+The solver supports several constructor configurations and can also configure the ACO implementation through setter methods.
+
+The principal parameters are:
+
+```text
+numAnts
+maxIterations
+alpha
+beta
+rho
+q0
+```
+
+The integration also supports convergence-series updates and solution callbacks so that the GUI can display optimization progress and obtain the final routes for visualization and export.
+
+---
+
+## Output
+
+The application can generate:
+
+```text
+results/
+├── routes_summary_latest.csv
+├── aco_chart_YYYYMMDD_HHMMSS.png
+└── plots/
+    ├── final charts
+    └── latest chart
+```
+
+The route-summary CSV is intended to provide route-level information for subsequent analysis.
+
+---
+
+## Research Scope
+
+This repository should be viewed primarily as a **research and experimental implementation** rather than a production logistics platform.
+
+The associated research focuses on understanding how:
+
+* local search,
+* adaptive parameter control,
+* diversity preservation, and
+* combined adaptive-diversity mechanisms
+
+affect ACO performance on MDVRPTW benchmark instances.
+
+The reported results are therefore intended for comparative analysis of the investigated ACO variants.
+
+---
+
+## Limitations and Future Work
+
+The research identifies several directions for future development:
+
+* Dynamic routing environments
+* Larger-scale routing problems
+* More sophisticated hybrid metaheuristics
+* Parallel optimization
+* Cost-aware scheduling
+* Broader logistics applications
+
+Future implementations may also extend the current JavaFX interface and optimization framework with additional benchmark families and algorithmic variants.
+
+---
+
+## Associated Publication
+
+**Morsidi, F., Ariffin, A. H., & Abdul Wahid, R.**
+
+*Adaptive and Diversity-Driven Ant Colony Optimization Variants for the Multi-Depot Vehicle Routing Problem with Time Windows.*
+
+**Applied Mathematics and Computational Intelligence**, Vol. 15, May 2026.
+
+---
+
+## Citation
+
+If you use this implementation or build upon the research, please cite the associated publication:
+
+```text
+Morsidi, F., Ariffin, A. H., & Abdul Wahid, R.
+Adaptive and Diversity-Driven Ant Colony Optimization Variants
+for the Multi-Depot Vehicle Routing Problem with Time Windows.
+Applied Mathematics and Computational Intelligence, Vol. 15, 2026.
+```
+
+---
+
+## Author
+
+**Farid Morsidi**
+
+Research interests include:
+
+* Artificial Intelligence
+* Metaheuristic Optimization
+* Ant Colony Optimization
+* Vehicle Routing Problems
+* Combinatorial Optimization
+* Computational Intelligence
+* Logistics and Transportation Optimization
+
+---
+
+## License
+
+This repository is distributed under the license included in:
+
+```text
+LICENCE
+```
+
+Please review the license file before redistributing or incorporating the implementation into other projects.
