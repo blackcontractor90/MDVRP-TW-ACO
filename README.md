@@ -457,7 +457,7 @@ Future implementations may also extend the current JavaFX interface and optimiza
 
 *Adaptive and Diversity-Driven Ant Colony Optimization Variants for the Multi-Depot Vehicle Routing Problem with Time Windows.*
 
-**Applied Mathematics and Computational Intelligence**, Vol. 15, May 2026.
+**Applied Mathematics and Computational Intelligence**, pending issue.
 
 ---
 
@@ -495,7 +495,7 @@ Research interests include:
 This repository is distributed under the license included in:
 
 ```text
-LICENCE
+MIT
 ```
 
 Please review the license file before redistributing or incorporating the implementation into other projects.
