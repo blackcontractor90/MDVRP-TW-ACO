@@ -357,3 +357,37 @@ metrics/summary.csv
 metrics/summary_all_*.csv
 metrics/run
 ```
+
+## Citation
+
+If you use this code, please cite:
+
+```bibtex
+@article{morsidi2026aco,
+  author  = {Morsidi, Farid; Ariffin, Asma Hanee; Abdul Wahid, Rohaizah},
+  title   = {Comparative Analysis of Adaptive and Diversity-Driven Ant Colony 
+Optimization Variants for the Multi-Depot Vehicle Routing Problem with 
+Time Windows},
+  journal = {Applied Mathematics and Computational Intelligence},
+  year    = {2026},
+}
+```
+
+A citable, versioned archive of this repository is available via Zenodo:
+https://doi.org/10.5281/zenodo.22933165
+
+---
+
+## License
+
+MIT License.
+
+---
+
+## Contact
+
+**Farid Morsidi**
+farid.mors90@gmail.com
+Computing Department, Faculty of Computing & Meta-Technology
+Universiti Pendidikan Sultan Idris, 35900 Tanjong Malim, Perak, Malaysia
+
