@@ -1,255 +1,295 @@
-# Adaptive and Diversity-Driven Ant Colony Optimization for MDVRPTW
+# MDVRP-TW-ACO
 
-A Java/JavaFX research implementation of **Ant Colony Optimization (ACO)** for the **Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW)**.
+**Ant Colony Optimization for the Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW)**
 
-This project provides a graphical environment for loading MDVRPTW instances, configuring ACO parameters, executing the optimization process, monitoring convergence, visualizing routes, and exporting route summaries.
+A Java/JavaFX research implementation of Ant Colony Optimization (ACO) for solving the Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW). The project investigates hybrid local search, adaptive parameter control, and diversity preservation within an ACO framework.
 
-The implementation accompanies the research work:
-
-> **Adaptive and Diversity-Driven Ant Colony Optimization Variants for the Multi-Depot Vehicle Routing Problem with Time Windows**
-
-**Farid Morsidi, Asma Hanee Ariffin, and Rohaizah Abdul Wahid**
+The implementation accompanies research on adaptive and diversity-driven ACO variants for MDVRPTW.
 
 ---
 
-## Overview
+## Research Context
 
-The **Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW)** is a combinatorial optimization problem in which a fleet of vehicles must serve customers from multiple depots while considering routing distance, vehicle capacity, service requirements, and customer time windows.
+The **Multi-Depot Vehicle Routing Problem with Time Windows (MDVRPTW)** is a constrained combinatorial optimization problem involving:
 
-This repository investigates ACO-based approaches for MDVRPTW, with particular attention to the balance between **exploration and exploitation**.
+* Multiple depots
+* Multiple customer locations
+* Vehicle capacity constraints
+* Customer service time windows
+* Route-distance minimization
+* Feasibility and penalty management
 
-The research implementation considers three complementary mechanisms:
+Classical ACO can suffer from premature convergence and excessive exploitation of early solutions. This implementation therefore extends the basic ACO framework with three complementary mechanisms:
 
-* **Local-search refinement** to improve constructed solutions.
-* **Adaptive parameter control** to respond to stagnation during the search.
-* **Diversity-driven adaptation** to preserve variation among candidate solutions.
-* **Hybrid adaptation** combining stagnation-based and diversity-based feedback.
+1. **Local Search**
+2. **Adaptive Parameter Control**
+3. **Solution Diversity Preservation**
 
-The overall objective is not simply to increase exploitation, but to provide an optimization framework capable of adapting its search behaviour as the problem landscape changes.
-
----
-
-## Research Motivation
-
-Classical ACO can be affected by:
-
-* Premature convergence.
-* Excessive concentration of pheromone information.
-* Sensitivity to parameter settings.
-* Insufficient exploration on more difficult routing instances.
-
-The implemented framework therefore investigates adaptive mechanisms based on both **search progress** and **population diversity**.
-
-The principal ACO parameters considered are:
-
-| Parameter | Description                        |
-| --------- | ---------------------------------- |
-| `α`       | Influence of pheromone information |
-| `β`       | Influence of heuristic information |
-| `ρ`       | Pheromone evaporation rate         |
-| `q0`      | Exploitation/exploration balance   |
-
-The adaptive mechanism can modify these parameters when the search exhibits stagnation, while the diversity mechanism responds when the candidate-solution population becomes insufficiently diverse.
+The resulting framework supports experimentation with different combinations of exploration, exploitation, intensification, and diversification.
 
 ---
 
-## Main Components
+## Research Architecture
 
-### 1. ACO with Local Search
+<p align="center">
+  <img src="docs/diagrams/aco_architecture.svg"
+       alt="ACO MDVRPTW hybrid search architecture"
+       width="100%">
+</p>
 
-The solution-construction process uses pheromone information and heuristic information while considering routing feasibility.
-
-Local-search refinement is subsequently applied to improve constructed routes.
-
-The research framework considers:
-
-* Intra-route **2-opt**
-* Inter-route **relocate**
-* Additional local-search moves where applicable
-
-This provides an intensification stage following the global exploration performed by ACO.
-
-### 2. Adaptive ACO
-
-The adaptive variant monitors optimization progress and modifies ACO parameters when the search becomes stagnant.
-
-When stagnation is detected, the framework can:
-
-* Reduce `q0` to encourage exploration.
-* Increase `ρ` to alter pheromone evaporation.
-* Adjust `α` and `β` to change the relative influence of pheromone and heuristic information.
-
-The intention is to reduce prolonged convergence around an insufficient solution.
-
-### 3. Diversity-Driven ACO
-
-The diversity-based variant monitors the variability of solutions generated by the ant population.
-
-A normalized solution-distance measure is used to identify situations in which the population becomes overly similar.
-
-When diversity falls below the specified threshold, the search parameters are modified to encourage further exploration.
-
-### 4. Hybrid Adaptive-Diversity ACO
-
-The combined approach monitors two conditions:
-
-1. **Search stagnation**
-2. **Low solution diversity**
-
-Parameter adaptation can be triggered by either condition.
-
-This creates a feedback-driven mechanism that attempts to maintain an appropriate balance between convergence and exploration.
+The solver combines pheromone-guided solution construction with heuristic information, local improvement, adaptive parameter control, diversity monitoring, and pheromone updating.
 
 ---
 
-## Benchmark Study
+## ACO Components
 
-The associated research evaluates the ACO variants using the **Cordeau MDVRPTW benchmark instances p01–p08**.
+### 1. Ant Solution Construction
 
-The experimental configuration reported in the paper is:
+Each ant constructs a candidate MDVRPTW solution using:
 
-| Parameter           | Value |
-| ------------------- | ----: |
-| `α`                 |   1.0 |
-| `β`                 |   2.0 |
-| `ρ`                 |   0.1 |
-| `q0`                |   0.9 |
-| Number of ants      |    20 |
-| Maximum iterations  |   100 |
-| Stagnation limit    |    10 |
-| Diversity threshold |   0.2 |
+* Pheromone information
+* Heuristic information
+* Distance
+* Vehicle capacity feasibility
+* Customer time-window compatibility
 
-The study evaluates several measures, including:
-
-* Total distance
-* Route duration
-* Cost
-* Time-window penalty
+The transition mechanism balances pheromone influence and problem-specific heuristic information.
 
 ---
 
-## Reported Research Findings
+### 2. Local Search
 
-The experiments show that the behaviour of the different strategies varies with instance size and difficulty.
+Candidate solutions can undergo local improvement using:
 
-For medium-scale instances, the combined hybrid strategy achieved reductions of up to:
+* **Intra-route 2-opt**
+* **Inter-route relocate**
+
+The local search stage provides intensification by improving the routes generated during ant construction.
+
+The relocate procedure can perform multiple refinement rounds to further improve feasible or penalized solutions.
+
+---
+
+### 3. Adaptive Parameter Control
+
+The implementation dynamically adjusts the principal ACO parameters when the search exhibits stagnation or insufficient diversity.
+
+The monitored parameters include:
+
+* `alpha` — pheromone influence
+* `beta` — heuristic influence
+* `rho` — pheromone evaporation
+* `q0` — exploitation/exploration control
+
+<p align="center">
+  <img src="docs/diagrams/aco_adaptation.svg"
+       alt="Adaptive and diversity-driven ACO parameter control"
+       width="100%">
+</p>
+
+Two adaptation mechanisms are implemented:
+
+#### Stagnation Adaptation
+
+When the best solution does not improve for a predefined number of iterations:
+
+* `q0` is reduced
+* `rho` is increased
+* `alpha` is reduced
+* `beta` is increased
+
+This encourages greater exploration and reduces excessive reliance on established pheromone trails.
+
+#### Diversity Adaptation
+
+Solution diversity is estimated using normalized pairwise Hamming distance.
+
+When diversity falls below the specified threshold:
+
+* `q0` is reduced
+* `rho` is increased
+* `alpha` is reduced
+* `beta` is adjusted to encourage alternative search behaviour
+
+---
+
+## Research Pipeline
+
+<p align="center">
+  <img src="docs/diagrams/aco_research_pipeline.svg"
+       alt="MDVRPTW ACO research and experimentation pipeline"
+       width="100%">
+</p>
+
+The overall research workflow is:
+
+```text
+MDVRPTW Instance
+       │
+       ▼
+Data Loading
+       │
+       ▼
+Ant Solution Construction
+       │
+       ▼
+Local Search
+       │
+       ▼
+Solution Evaluation
+       │
+       ├───────────────┐
+       ▼               ▼
+Stagnation         Diversity
+Detection          Monitoring
+       │               │
+       └───────┬───────┘
+               ▼
+       Parameter Adaptation
+               │
+               ▼
+       Pheromone Update
+               │
+               ▼
+        Next ACO Iteration
+               │
+               ▼
+        Best Solution
+               │
+               ▼
+       Metrics & Visualisation
+```
+
+---
+
+## Current Software Configuration
+
+The current repository implementation uses the following default configuration:
+
+| Parameter                     | Current Value |
+| ----------------------------- | ------------: |
+| Number of ants                |            50 |
+| Maximum iterations            |           200 |
+| Alpha (`α`)                   |           1.0 |
+| Beta (`β`)                    |           2.0 |
+| Evaporation (`ρ`)             |           0.5 |
+| Exploitation threshold (`q0`) |           0.9 |
+| Stagnation limit              |            20 |
+| Diversity threshold           |          0.15 |
+| Initial pheromone             |           1.0 |
+
+The implementation should be regarded as an actively configurable research codebase rather than a strict reproduction of every parameter used in the published experiments.
+
+---
+
+## Published Experimental Configuration
+
+The associated research paper used the following experimental configuration:
+
+| Parameter                     | Published Setting |
+| ----------------------------- | ----------------: |
+| Alpha (`α`)                   |               1.0 |
+| Beta (`β`)                    |               2.0 |
+| Evaporation (`ρ`)             |               0.1 |
+| Exploitation threshold (`q0`) |               0.9 |
+| Number of ants                |                20 |
+| Maximum iterations            |               100 |
+| Stagnation limit              |                10 |
+| Diversity threshold           |               0.2 |
+
+Therefore, the current GitHub implementation and the published experimental configuration should not be assumed to be numerically identical.
+
+---
+
+## Research Findings
+
+The associated study evaluated several ACO variants on the Cordeau MDVRPTW benchmark instances **p01–p08**.
+
+The investigated approaches included:
+
+* Basic Hybrid ACO with local search
+* Adaptive ACO
+* Diversity-driven ACO
+* Hybrid adaptive + diversity-driven ACO
+
+The study found that the mechanisms affect the search in different ways:
+
+### Local Search
+
+Local search provides rapid intensification and can improve solutions produced during the initial construction phase.
+
+### Adaptive Parameter Control
+
+Adaptive control helps the algorithm respond to stagnation and provides a mechanism for escaping overly exploitative search behaviour.
+
+### Diversity Preservation
+
+Diversity monitoring encourages continued exploration when the population of solutions becomes too similar.
+
+### Hybrid Adaptation
+
+Combining stagnation and diversity information provides a more responsive search mechanism by allowing parameter adaptation to be triggered by either search stagnation or insufficient solution diversity.
+
+The published experiments reported maximum reductions of approximately:
 
 * **28.5% in total distance**
 * **20.3% in penalty**
 
-relative to the adaptive ACO configuration reported in the study.
+for selected medium-scale benchmark instances when comparing the hybrid approach against the adaptive configuration.
 
-The diversity-driven approach also produced substantial improvements on selected medium-scale instances, with a maximum reported distance reduction of approximately **25%** relative to adaptive ACO.
-
-The results also demonstrate that no single adaptation mechanism consistently produces the lowest objective values for every benchmark instance. The study therefore focuses on the complementary behaviour of adaptive control and diversity preservation rather than claiming universal superiority of one configuration.
+These results are intended as comparative findings among the investigated ACO variants rather than a claim that the implementation universally outperforms other MDVRPTW algorithms.
 
 ---
 
-## Software Features
+## Features
 
-The Java/JavaFX application provides:
+### Core Algorithm
 
-* MDVRPTW instance loading
-* Cordeau-like text input
-* Flexible CSV input
-* ACO parameter controls
-* JavaFX graphical interface
-* ACO convergence visualization
-* Route visualization
-* Route-distance charts
-* Scatter plots of routes and depots
-* CSV route-summary export
-* Automatic result-file generation
-* Runtime ACO integration through `AntColonyOptimization`
+* Ant Colony Optimization
+* Multi-depot routing
+* Time-window constraints
+* Capacity constraints
+* Pheromone-based search
+* Heuristic-guided construction
+* Local search
+* Adaptive parameter control
+* Diversity monitoring
+* Pheromone evaporation and reinforcement
 
-The current repository is designed around a lightweight solver architecture and retains compatibility with the existing domain classes used by the MDVRPTW implementation.
+### Local Search
 
----
+* Intra-route 2-opt
+* Inter-route relocate
+* Iterative relocate refinement
 
-## Repository Structure
+### Adaptive Search
 
-The principal Java components are:
+* Stagnation detection
+* Diversity measurement
+* Dynamic `alpha`
+* Dynamic `beta`
+* Dynamic `rho`
+* Dynamic `q0`
 
-```text
-MDVRP-TW-ACO/
-│
-├── AntColonyOptimization.java
-├── MDVRPTWSolver.java
-├── RoutingSolver.java
-│
-├── Customer.java
-├── Depot.java
-├── Vehicle.java
-├── Route.java
-├── Solution.java
-├── Decoder.java
-│
-├── DataLoader.java
-├── RouteExporter.java
-│
-├── SolutionMetrics.java
-├── MetricsAnalyzer.java
-├── MetricsChartViewer.java
-│
-├── CanvasPane.java
-│
-├── instructions.txt
-├── LICENCE
-└── README.md
-```
+### JavaFX Interface
+
+The application provides a graphical interface for:
+
+* Loading routing instances
+* Configuring ACO parameters
+* Running the solver
+* Viewing routes
+* Monitoring convergence
+* Inspecting solution metrics
+* Exporting results
 
 ---
 
-## Requirements
+## Input Data
 
-### Java
+The solver supports Cordeau-style routing data and flexible CSV input.
 
-The project is intended for:
-
-* **Java 11 or later**
-
-### JavaFX
-
-A compatible **OpenJFX** installation is required.
-
-The primary runtime module is:
-
-```text
-javafx.controls
-```
-
-Additional JavaFX modules may be required depending on the selected build configuration.
-
----
-
-## Input Formats
-
-### Cordeau-like Text Format
-
-The solver supports Cordeau-like MDVRPTW text files.
-
-A typical structure contains:
-
-```text
-m n ...
-```
-
-followed by depot information and customer information.
-
-Conceptually:
-
-```text
-depotId x y capacity maxVehicles
-customerId x y demand ready due service
-```
-
-The exact input structure should follow the format expected by the project's `DataLoader`.
-
-### CSV
-
-Flexible CSV input is also supported.
-
-Typical fields include:
+Recognized CSV fields include:
 
 ```text
 id
@@ -260,242 +300,60 @@ ready
 due
 service
 type
+name
 maxVehicles
 vehicleCapacity
 depotId
 ```
 
-The parser treats `depot` and `customer` as the principal entity types.
+The parser can identify:
 
----
+* Depots
+* Customers
+* Coordinates
+* Demand
+* Time-window information
+* Service duration
+* Vehicle capacity
+* Depot assignments
 
-## Building and Running
-
-### Using an IDE
-
-The project can be imported into a Java development environment such as Eclipse or IntelliJ IDEA.
-
-Ensure that:
-
-1. A compatible JDK is configured.
-2. JavaFX libraries are available.
-3. The JavaFX module path is correctly configured.
-4. All project `.java` files are included in the build path.
-
-The main application is:
-
-```text
-MDVRPTWSolver
-```
-
-### Command Line
-
-A manual JavaFX compilation follows the general form:
-
-```bash
-javac --module-path /path/to/javafx/lib \
-      --add-modules javafx.controls \
-      -cp . \
-      MDVRPTWSolver.java
-```
-
-Run with:
-
-```bash
-java --module-path /path/to/javafx/lib \
-     --add-modules javafx.controls \
-     -cp . \
-     MDVRPTWSolver
-```
-
-Replace:
-
-```text
-/path/to/javafx/lib
-```
-
-with the location of the JavaFX SDK on the local system.
-
----
-
-## Using the Graphical Interface
-
-After launching the application:
-
-### 1. Load an Instance
-
-Use:
-
-```text
-File → Load Instance...
-```
-
-Supported files include:
-
-```text
-.txt
-.dat
-.csv
-```
-
-### 2. Configure ACO
-
-The interface provides controls for:
-
-```text
-α   Pheromone influence
-β   Heuristic influence
-ρ   Evaporation rate
-q0  Exploration / exploitation balance
-```
-
-### 3. Run the Optimizer
-
-Use:
-
-```text
-Tools → Run ACO
-```
-
-or the corresponding run control in the interface.
-
-### 4. Monitor Convergence
-
-The application provides a convergence chart showing the development of the best objective value across iterations.
-
-### 5. Inspect Routes
-
-The generated solution can be visualized using route-distance and spatial route plots.
-
-### 6. Export Results
-
-Route summaries can be exported to CSV.
-
-Typical output:
-
-```text
-results/routes_summary_latest.csv
-```
-
-Charts are also saved under the `results/` directory.
-
----
-
-## ACO Integration
-
-`MDVRPTWSolver` integrates with the `AntColonyOptimization` implementation.
-
-The solver supports several constructor configurations and can also configure the ACO implementation through setter methods.
-
-The principal parameters are:
-
-```text
-numAnts
-maxIterations
-alpha
-beta
-rho
-q0
-```
-
-The integration also supports convergence-series updates and solution callbacks so that the GUI can display optimization progress and obtain the final routes for visualization and export.
+For customer-only CSV data without explicit depot information, a default depot can be created at `(0,0)`.
 
 ---
 
 ## Output
 
-The application can generate:
+The solver generates routing and experiment results in several formats.
+
+### Route Summaries
 
 ```text
-results/
-├── routes_summary_latest.csv
-├── aco_chart_YYYYMMDD_HHMMSS.png
-└── plots/
-    ├── final charts
-    └── latest chart
+results/routes_summary_YYYYMMDD_HHMMSS.csv
+results/routes_summary_latest.csv
+results/routes_overall_summary_YYYYMMDD_HHMMSS.csv
+results/routes_overall_summary_latest.csv
 ```
 
-The route-summary CSV is intended to provide route-level information for subsequent analysis.
-
----
-
-## Research Scope
-
-This repository should be viewed primarily as a **research and experimental implementation** rather than a production logistics platform.
-
-The associated research focuses on understanding how:
-
-* local search,
-* adaptive parameter control,
-* diversity preservation, and
-* combined adaptive-diversity mechanisms
-
-affect ACO performance on MDVRPTW benchmark instances.
-
-The reported results are therefore intended for comparative analysis of the investigated ACO variants.
-
----
-
-## Limitations and Future Work
-
-The research identifies several directions for future development:
-
-* Dynamic routing environments
-* Larger-scale routing problems
-* More sophisticated hybrid metaheuristics
-* Parallel optimization
-* Cost-aware scheduling
-* Broader logistics applications
-
-Future implementations may also extend the current JavaFX interface and optimization framework with additional benchmark families and algorithmic variants.
-
----
-
-## Associated Publication
-
-**Morsidi, F., Ariffin, A. H., & Abdul Wahid, R.**
-
-*Adaptive and Diversity-Driven Ant Colony Optimization Variants for the Multi-Depot Vehicle Routing Problem with Time Windows.*
-
-**Applied Mathematics and Computational Intelligence**, pending issue.
-
----
-
-## Citation
-
-If you use this implementation or build upon the research, please cite the associated publication:
+### Route Visualisations
 
 ```text
-Morsidi, F., Ariffin, A. H., & Abdul Wahid, R.
-Adaptive and Diversity-Driven Ant Colony Optimization Variants
-for the Multi-Depot Vehicle Routing Problem with Time Windows.
-Applied Mathematics and Computational Intelligence, Vol. 15, 2026.
+results/plots/
 ```
 
----
-
-## Author
-
-**Farid Morsidi**
-
-Research interests include:
-
-* Artificial Intelligence
-* Metaheuristic Optimization
-* Ant Colony Optimization
-* Vehicle Routing Problems
-* Combinatorial Optimization
-* Computational Intelligence
-* Logistics and Transportation Optimization
-
----
-
-## License
-
-This repository is distributed under the license included in:
+Typical generated plots include:
 
 ```text
-MIT
+route_scatter_*.png
+route_layout_*.png
+routes_accumulated_dashboard_*.png
 ```
 
-Please review the license file before redistributing or incorporating the implementation into other projects.
+Latest versions are also generated for convenient inspection.
+
+### Metrics
+
+```text
+metrics/summary.csv
+metrics/summary_all_*.csv
+metrics/run
+```
